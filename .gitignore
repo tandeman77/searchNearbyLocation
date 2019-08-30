@@ -1,2 +1,5 @@
 #dont track config folder.
 config/
+node_modules/
+input/
+output/
