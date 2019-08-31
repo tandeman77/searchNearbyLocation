@@ -2,10 +2,11 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const request = require('request');
+const setApi = require('./ApiSetting.js');
 
 //write CSV
 const csvWriter = createCsvWriter({
-    path: 'output.csv',
+    path: './output/output.csv',
     header: [{
             id: 'suburb',
             title: 'suburb'
@@ -47,33 +48,33 @@ function read(file){
 
 }
 
-function setApi(data) {
-    console.log("setApi");
-    var api = 'http://api.geonames.org/findNearbyPlaceNameJSON?lat=THE_LAT&lng=THE_LONG&radius=THE_RADIUS&username=USERNAME';
-    var usernames = [
-        'tanatnous6',
-        'tanatnous1',
-        'tanatnous2',
-        'tanatnous3',
-        'tanatnous4',
-        'tanatnous5',
-        'tanatnous',
-        'tanatnous7',
-        'tanatnous8',
-        'tanatnous9'
-    ]
-    var requestUrls = [];
-    return new Promise ((resolve, reject) => {
-        for (var i = 0; i < data.length; i++) {
-            requestUrls.push(api.replace("THE_LAT", data[i].Lat)
-                .replace("THE_LONG", data[i].Long)
-                .replace("THE_RADIUS", data[i].radius_default)
-                .replace("USERNAME", usernames[Math.floor(Math.random() * 10) +1]));
-        }
-        console.log("end of set API")
-        resolve(requestUrls);
-    })
-}
+// function setApi(data) {
+//     console.log("setApi");
+//     var api = 'http://api.geonames.org/findNearbyPlaceNameJSON?lat=THE_LAT&lng=THE_LONG&radius=THE_RADIUS&username=USERNAME';
+//     var usernames = [
+//         'tanatnous6',
+//         'tanatnous1',
+//         'tanatnous2',
+//         'tanatnous3',
+//         'tanatnous4',
+//         'tanatnous5',
+//         'tanatnous',
+//         'tanatnous7',
+//         'tanatnous8',
+//         'tanatnous9'
+//     ]
+//     var requestUrls = [];
+//     return new Promise ((resolve, reject) => {
+//         for (var i = 0; i < data.length; i++) {
+//             requestUrls.push(api.replace("THE_LAT", data[i].Lat)
+//                 .replace("THE_LONG", data[i].Long)
+//                 .replace("THE_RADIUS", data[i].radius_default)
+//                 .replace("USERNAME", usernames[Math.floor(Math.random() * 10) +1]));
+//         }
+//         console.log("end of set API")
+//         resolve(requestUrls);
+//     })
+// }
 
 // getRequestResults();
 function initialise(url) {
@@ -108,7 +109,7 @@ async function main(){
     var response = '';
 
     console.log("start read file")
-    var fileName = 'input.csv';
+    var fileName = './input/input.csv';
     var requestUrls = await read(fileName);
     console.log("done")
     console.log(requestUrls[0])
