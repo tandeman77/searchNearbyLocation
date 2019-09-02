@@ -1,154 +1,90 @@
-const csv = require('csv-parser'); 
-const fs = require('fs');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-const request = require('request');
 const setApi = require('./ApiSetting.js');
+const distance = require('./Distance.js');
+const readFile = require('./ReadFile.js');
+const writeFile = require('./WriteFile.js');
+const requestFromApi = require('./request.js');
 
-//write CSV
-const csvWriter = createCsvWriter({
-    path: './output/output.csv',
-    header: [{
-            id: 'suburb',
-            title: 'suburb'
-        },
-        {
-            id: 'state',
-            title: 'state'
-        },
-        {
-            id: 'country',
-            title: 'country'
-        },
-        {
-            id: 'lat',
-            title: 'lat'
-        },
-        {
-            id: 'long',
-            title: 'long'
-        },
-        {
-            id: 'distance',
-            title: 'distance'
+function processResultPromises(resultPromises, output,original) {
+    return new Promise((resolve, reject) => {
+        for (let i = 0; i < resultPromises.length; i++) {
+            for (let j = 0; j < resultPromises[i].geonames.length; j++) {
+                output.push(extractInfo(resultPromises[i].geonames[j], original));
+                console.log(extractInfo(resultPromises[i].geonames[j]));
+            }
         }
-    ]
-});
-
-
-function read(file){
-    var data = [];
-    return new Promise ((resolve, reject) => {
-        fs.createReadStream(file).pipe(csv()).on('data', (row) => {
-            console.log(row);
-            data.push(row);
-        }).on('end', () => {
-            resolve(data);
-        })
+        resolve(output)
+    }).catch((err) => {
+        console.errors(err);
     })
-
 }
 
-// function setApi(data) {
-//     console.log("setApi");
-//     var api = 'http://api.geonames.org/findNearbyPlaceNameJSON?lat=THE_LAT&lng=THE_LONG&radius=THE_RADIUS&username=USERNAME';
-//     var usernames = [
-//         'tanatnous6',
-//         'tanatnous1',
-//         'tanatnous2',
-//         'tanatnous3',
-//         'tanatnous4',
-//         'tanatnous5',
-//         'tanatnous',
-//         'tanatnous7',
-//         'tanatnous8',
-//         'tanatnous9'
-//     ]
-//     var requestUrls = [];
-//     return new Promise ((resolve, reject) => {
-//         for (var i = 0; i < data.length; i++) {
-//             requestUrls.push(api.replace("THE_LAT", data[i].Lat)
-//                 .replace("THE_LONG", data[i].Long)
-//                 .replace("THE_RADIUS", data[i].radius_default)
-//                 .replace("USERNAME", usernames[Math.floor(Math.random() * 10) +1]));
-//         }
-//         console.log("end of set API")
-//         resolve(requestUrls);
-//     })
-// }
-
-// getRequestResults();
-function initialise(url) {
-    var options = {
-        url: url
-    };
-    return new Promise(function (resolve, reject) {
-        //request infomation from api
-        request.get(options, function (err, resp, body) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(JSON.parse(body));
-            };
-        });
-    });
-};
-
-function extractInfo(data) {
+function extractInfo(data, original) {
     return {
         suburb: data.toponymName,
         state: data.adminName1,
         country: data.countryName,
         lat: data.lat,
-        long: data.lng,
-        distance: data.distance
+        lng: data.lng,
+        distance: data.distance,
+        original: original
     };
 }
 
-async function main(){
-    var output = [];
-    var response = '';
+async function main() {
+    let output = [];
 
     console.log("start read file")
-    var fileName = './input/input.csv';
-    var requestUrls = await read(fileName);
-    console.log("done")
-    console.log(requestUrls[0])
+    let inputFile = './input/input.csv';
+    let requestUrls = await readFile(inputFile)
+    .then(()=>{
+        console.log('read input file done');
+    })
+    .catch((err) => {
+        console.errors(err)
+    });
+
+    let cityDatabaseFile = './input/population.csv';
+    let mainCities = await readFile(cityDatabaseFile)
+    .then(()=>{
+        console.log('city database loaded');
+    })
+    .catch((err) => {
+        console.errors(err);
+    });
+    
+    console.log(mainCities);
 
     console.log("start setting API");
-    requestUrls = await setApi(requestUrls);
+    requestUrls = await setApi(requestUrls).catch((err) => {
+        console.log(err)
+    });
     console.log("out of setApi");
-    console.log(requestUrls);
 
-    var resultPromises = [];
+    let resultPromises = [];
     console.log("starting promises push");
-    for (var i = 0; i < requestUrls.length; i++){
-        resultPromises.push(initialise(requestUrls[i]));
+    for (let i = 0; i < requestUrls.length; i++) {    
+        requestPromise = await requestFromApi(requestUrls[i]).catch((err) => {
+            console.log(err)
+        });
+        resultPromises.push(requestPromise);
         console.log("result promise" + i)
     }
+
     console.log("out of promises push");
     console.log("starting extracting info");
+    
+    console.log("start looping through each result")
+    console.log(resultPromises)
 
-    var collection = [];
-    await Promise.all(resultPromises).then((data) => {
-        console.log("start looping through each result")
-        console.log(data)
-        for (i = 0; i< data.length; i++){
-            for (var j = 0; j < data[i].geonames.length; j++){
-                output.push(extractInfo(data[i].geonames[j]));
-            }
-        }
-    })
-
-    console.log(output);
-    console.log(output.length + " locations detected");
+    // extract results
+    await processResultPromises(resultPromises, output);
 
     console.log("starting writing result")
-    csvWriter.writeRecords(output).then(() => {
+    writeFile.writeRecords(output).then(() => {
         console.log("write file done")
     })
+    console.log(output.length + " locations detected");
     console.log("complete all");
-
-
 };
 
 main();

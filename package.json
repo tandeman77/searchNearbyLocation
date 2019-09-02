@@ -13,6 +13,7 @@
     "csv-parser": "latest",
     "csv-writer": "latest",
     "request": "latest",
-    "request-promise": "latest"
+    "request-promise": "latest",
+    "geolib": "latest"
   }
 }
